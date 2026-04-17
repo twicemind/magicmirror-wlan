@@ -138,29 +138,14 @@ jobs:
               magicmirror-module/MMM-WLANManager/package.json
           fi
       
-      - name: Update CHANGELOG
-        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
-        run: |
-          # Get commits since last tag
-          COMMITS=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"- %s (%h)")
-          
-          # Prepare new changelog entry
-          DATE=$(date +%Y-%m-%d)
-          NEW_ENTRY="## [${{ steps.version_bump.outputs.NEW_VERSION }}] - $DATE\n\n### Changes\n\n$COMMITS\n\n"
-          
-          # Insert after [Unreleased] section
-          sed -i "/## \[Unreleased\]/a\\
-          \\
-          $NEW_ENTRY" CHANGELOG.md
-      
       - name: Commit version bump
         if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           
-          git add VERSION CHANGELOG.md magicmirror-module/MMM-WLANManager/package.json
-          git commit -m "chore: Bump version to ${{ steps.version_bump.outputs.NEW_VERSION }}"
+          git add VERSION magicmirror-module/MMM-WLANManager/package.json
+          git commit -m "chore: Bump version to ${{ steps.version_bump.outputs.NEW_VERSION }} [skip ci]"
           
           git tag -a "${{ steps.version_bump.outputs.NEW_TAG }}" -m "Release ${{ steps.version_bump.outputs.NEW_TAG }}"
           
@@ -206,8 +191,15 @@ jobs:
           name: "${{ steps.version_bump.outputs.NEW_TAG }}"
           body: |
             ## MagicMirror WLAN Manager ${{ steps.version_bump.outputs.NEW_VERSION }}
-            
-            ### Installation
+          # Try to extract from CHANGELOG.md if entry exists
+          VERSION="${{ steps.version_bump.outputs.NEW_VERSION }}"
+          
+          if grep -q "## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
+            CHANGELOG=$(sed -n "/## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+          else
+            # Fallback: use commit messages since last tag
+            CHANGELOG=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
             ```bash
             curl -sSL https://raw.githubusercontent.com/twicemind/magicmirror-wlan/${{ steps.version_bump.outputs.NEW_TAG }}/install.sh | sudo bash
             ```
