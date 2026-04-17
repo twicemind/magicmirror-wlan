@@ -7,6 +7,8 @@ Intelligent WLAN configuration system with automatic HotSpot fallback, web-based
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-red.svg)](https://www.raspberrypi.org/)
+[![Tests](https://github.com/twicemind/magicmirror-wlan/actions/workflows/test.yml/badge.svg)](https://github.com/twicemind/magicmirror-wlan/actions/workflows/test.yml)
+[![Release](https://github.com/twicemind/magicmirror-wlan/actions/workflows/release.yml/badge.svg)](https://github.com/twicemind/magicmirror-wlan/actions/workflows/release.yml)
 
 ## Features
 
