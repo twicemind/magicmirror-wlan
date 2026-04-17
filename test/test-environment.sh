@@ -69,6 +69,7 @@ if [[ ! -d "$PROJECT_DIR/webui/venv" ]]; then
     echo "Creating Python virtual environment..."
     cd "$PROJECT_DIR/webui"
     python3 -m venv venv
+    # shellcheck source=/dev/null
     source venv/bin/activate
     pip install --upgrade pip
     pip install -r requirements.txt
@@ -80,6 +81,7 @@ fi
 # Start WebUI in background
 echo "Starting WebUI (port 8765)..."
 cd "$PROJECT_DIR/webui"
+# shellcheck source=/dev/null
 source venv/bin/activate
 
 # Start in background
@@ -149,6 +151,6 @@ echo "Press Ctrl+C to stop all services"
 echo ""
 
 # Wait for Ctrl+C
-trap "echo ''; echo 'Stopping services...'; kill $WEBUI_PID 2>/dev/null; [[ -n \$MONITOR_PID ]] && kill \$MONITOR_PID 2>/dev/null; echo 'Stopped.'; exit 0" INT
+trap 'echo ""; echo "Stopping services..."; kill $WEBUI_PID 2>/dev/null; [[ -n $MONITOR_PID ]] && kill $MONITOR_PID 2>/dev/null; echo "Stopped."; exit 0' INT
 
 wait
