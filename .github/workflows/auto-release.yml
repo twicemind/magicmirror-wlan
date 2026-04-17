@@ -1,0 +1,225 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'test/**'
+
+jobs:
+  # First, run all tests
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile webui/app.py
+          python -m py_compile scripts/network-monitor.py
+      
+      - name: Validate service files
+        run: |
+          for service in services/*.service; do
+            grep -q "\[Unit\]" "$service"
+            grep -q "\[Service\]" "$service"
+            grep -q "\[Install\]" "$service"
+          done
+  
+  # Create release only if tests pass
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+          
+          # Extract version numbers
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          
+          echo "Current version: $MAJOR.$MINOR.$PATCH"
+          echo "MAJOR=$MAJOR" >> $GITHUB_OUTPUT
+          echo "MINOR=$MINOR" >> $GITHUB_OUTPUT
+          echo "PATCH=$PATCH" >> $GITHUB_OUTPUT
+      
+      - name: Determine version bump
+        id: version_bump
+        run: |
+          # Get commit messages since last tag
+          COMMITS=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"%s")
+          
+          echo "Analyzing commits:"
+          echo "$COMMITS"
+          
+          # Check for breaking changes or major features
+          if echo "$COMMITS" | grep -qiE "^(BREAKING CHANGE|feat!|fix!):"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qiE "^feat"; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+          
+          echo "Version bump type: $BUMP"
+          echo "BUMP=$BUMP" >> $GITHUB_OUTPUT
+          
+          # Calculate new version
+          MAJOR=${{ steps.get_tag.outputs.MAJOR }}
+          MINOR=${{ steps.get_tag.outputs.MINOR }}
+          PATCH=${{ steps.get_tag.outputs.PATCH }}
+          
+          if [ "$BUMP" == "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP" == "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          NEW_TAG="v$NEW_VERSION"
+          
+          echo "New version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_OUTPUT
+      
+      - name: Check if version bump needed
+        id: check_bump
+        run: |
+          # Only create release if there are commits since last tag
+          COMMITS_COUNT=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --oneline | wc -l)
+          
+          if [ "$COMMITS_COUNT" -eq 0 ]; then
+            echo "No new commits since last tag"
+            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found $COMMITS_COUNT new commits"
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Update VERSION file
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        run: |
+          echo "${{ steps.version_bump.outputs.NEW_VERSION }}" > VERSION
+          
+          # Update package.json version
+          if [ -f "magicmirror-module/MMM-WLANManager/package.json" ]; then
+            sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.version_bump.outputs.NEW_VERSION }}\"/" \
+              magicmirror-module/MMM-WLANManager/package.json
+          fi
+      
+      - name: Update CHANGELOG
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        run: |
+          # Get commits since last tag
+          COMMITS=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"- %s (%h)")
+          
+          # Prepare new changelog entry
+          DATE=$(date +%Y-%m-%d)
+          NEW_ENTRY="## [${{ steps.version_bump.outputs.NEW_VERSION }}] - $DATE\n\n### Changes\n\n$COMMITS\n\n"
+          
+          # Insert after [Unreleased] section
+          sed -i "/## \[Unreleased\]/a\\
+          \\
+          $NEW_ENTRY" CHANGELOG.md
+      
+      - name: Commit version bump
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          git add VERSION CHANGELOG.md magicmirror-module/MMM-WLANManager/package.json
+          git commit -m "chore: Bump version to ${{ steps.version_bump.outputs.NEW_VERSION }}"
+          
+          git tag -a "${{ steps.version_bump.outputs.NEW_TAG }}" -m "Release ${{ steps.version_bump.outputs.NEW_TAG }}"
+          
+          git push origin main
+          git push origin "${{ steps.version_bump.outputs.NEW_TAG }}"
+      
+      - name: Create release archive
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        run: |
+          mkdir -p release
+          tar -czf "release/magicmirror-wlan-${{ steps.version_bump.outputs.NEW_VERSION }}.tar.gz" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='release' \
+            --exclude='test/mock-*.txt' \
+            --exclude='test/wlan-status.json' \
+            --exclude='*.log' \
+            --exclude='__pycache__' \
+            --exclude='venv' \
+            --exclude='.DS_Store' \
+            --exclude='node_modules' \
+            .
+          
+          cd release
+          sha256sum "magicmirror-wlan-${{ steps.version_bump.outputs.NEW_VERSION }}.tar.gz" > checksums.txt
+      
+      - name: Extract changelog
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        id: changelog
+        run: |
+          VERSION="${{ steps.version_bump.outputs.NEW_VERSION }}"
+          CHANGELOG=$(sed -n "/## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create GitHub Release
+        if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version_bump.outputs.NEW_TAG }}
+          name: "${{ steps.version_bump.outputs.NEW_TAG }}"
+          body: |
+            ## MagicMirror WLAN Manager ${{ steps.version_bump.outputs.NEW_VERSION }}
+            
+            ### Installation
+            ```bash
+            curl -sSL https://raw.githubusercontent.com/twicemind/magicmirror-wlan/${{ steps.version_bump.outputs.NEW_TAG }}/install.sh | sudo bash
+            ```
+            
+            ### Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            See [CHANGELOG.md](https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version_bump.outputs.NEW_TAG }}/CHANGELOG.md) for full details.
+          draft: false
+          prerelease: false
+          files: |
+            release/magicmirror-wlan-${{ steps.version_bump.outputs.NEW_VERSION }}.tar.gz
+            release/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,219 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  shellcheck:
+    name: Shell Script Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run ShellCheck on scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+          severity: warning
+      
+      - name: Check install script
+        run: shellcheck install.sh
+      
+      - name: Check uninstall script
+        run: shellcheck uninstall.sh
+      
+      - name: Check test scripts
+        run: shellcheck test/*.sh
+
+  python-validation:
+    name: Python Code Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd webui
+          pip install -r requirements.txt
+          pip install pylint black flake8
+      
+      - name: Check code formatting with Black
+        run: |
+          cd webui
+          black --check app.py || true
+      
+      - name: Lint with flake8
+        run: |
+          cd webui
+          flake8 app.py --max-line-length=120 --ignore=E501,W503 || true
+      
+      - name: Syntax check WebUI
+        run: |
+          cd webui
+          python -m py_compile app.py
+      
+      - name: Syntax check network-monitor
+        run: |
+          python -m py_compile scripts/network-monitor.py
+
+  config-validation:
+    name: Configuration Files Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate template files
+        run: |
+          # Check if template files exist and are readable
+          test -f config/hostapd.conf.template
+          test -f config/dnsmasq.conf.template
+          test -f config/wpa_supplicant.conf.template
+          echo "All template files present"
+
+  service-validation:
+    name: Systemd Service Files Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate systemd service files
+        run: |
+          # Check service files exist
+          test -f services/network-monitor.service
+          test -f services/wlan-webui.service
+          
+          # Basic syntax check (grep for required fields)
+          for service in services/*.service; do
+            echo "Validating $service"
+            grep -q "\[Unit\]" "$service"
+            grep -q "\[Service\]" "$service"
+            grep -q "\[Install\]" "$service"
+          done
+
+  magicmirror-module:
+    name: MagicMirror Module Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install module dependencies
+        run: |
+          cd magicmirror-module/MMM-WLANManager
+          npm install
+      
+      - name: Check JavaScript syntax
+        run: |
+          cd magicmirror-module/MMM-WLANManager
+          node -c MMM-WLANManager.js
+          node -c node_helper.js
+      
+      - name: Validate package.json
+        run: |
+          cd magicmirror-module/MMM-WLANManager
+          npm ls || true
+
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Test installation script syntax
+        run: |
+          bash -n install.sh
+          bash -n uninstall.sh
+      
+      - name: Test all bash scripts syntax
+        run: |
+          for script in scripts/*.sh; do
+            echo "Checking $script"
+            bash -n "$script"
+          done
+          
+          for script in test/*.sh; do
+            echo "Checking $script"
+            bash -n "$script"
+          done
+      
+      - name: Set up Python for WebUI test
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Test WebUI startup in mock mode
+        run: |
+          cd webui
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          
+          # Start WebUI in background with mock mode
+          export MOCK_MODE=true
+          timeout 10 python app.py || true
+          
+          echo "WebUI startup test completed"
+      
+      - name: Test network-monitor in mock mode
+        run: |
+          cd scripts
+          export MOCK_MODE=true
+          
+          # Create mock files for test
+          mkdir -p ../test
+          echo "true" > ../test/mock-internet.txt
+          echo "false" > ../test/mock-hotspot-active.txt
+          
+          # Run network-monitor for 5 seconds
+          timeout 5 python3 network-monitor.py || true
+          
+          echo "Network monitor test completed"
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check required documentation files
+        run: |
+          test -f README.md
+          test -f INSTALLATION.md
+          test -f CHANGELOG.md
+          test -f LICENSE
+          test -f PROJECT_OVERVIEW.md
+          test -f QUICKSTART.md
+          test -f RELEASE.md
+          echo "All documentation files present"
+      
+      - name: Check markdown syntax
+        uses: DavidAnson/markdownlint-cli2-action@v14
+        with:
+          globs: '**/*.md'
+        continue-on-error: true

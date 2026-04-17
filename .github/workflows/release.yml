@@ -1,0 +1,162 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=v$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          tar -czf "release/magicmirror-wlan-${{ steps.version.outputs.VERSION }}.tar.gz" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='release' \
+            --exclude='test/mock-*.txt' \
+            --exclude='test/wlan-status.json' \
+            --exclude='*.log' \
+            --exclude='__pycache__' \
+            --exclude='venv' \
+            --exclude='.DS_Store' \
+            --exclude='node_modules' \
+            .
+          
+          # Create checksums
+          cd release
+          sha256sum "magicmirror-wlan-${{ steps.version.outputs.VERSION }}.tar.gz" > checksums.txt
+      
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract changelog section for this version
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          # Try to extract from CHANGELOG.md
+          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            CHANGELOG=$(sed -n "/## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+          else
+            # Fallback to commit messages since last tag
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -z "$PREVIOUS_TAG" ]; then
+              CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+            else
+              CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            fi
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create release body
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## 🪞 MagicMirror WLAN Manager ${{ steps.version.outputs.VERSION }}
+          
+          Automatisches WiFi-Management für MagicMirror mit HotSpot-Fallback, WebUI und QR-Code-Setup.
+          
+          ### 🚀 Quick Installation
+          
+          **On Raspberry Pi:**
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/twicemind/magicmirror-wlan/${{ steps.version.outputs.TAG }}/install.sh | sudo bash
+          ```
+          
+          **Or download and install:**
+          ```bash
+          wget https://github.com/twicemind/magicmirror-wlan/releases/download/${{ steps.version.outputs.TAG }}/magicmirror-wlan-${{ steps.version.outputs.VERSION }}.tar.gz
+          tar -xzf magicmirror-wlan-${{ steps.version.outputs.VERSION }}.tar.gz
+          cd magicmirror-wlan
+          sudo bash install.sh
+          ```
+          
+          ### 🧪 Local Testing
+          
+          ```bash
+          git clone --branch ${{ steps.version.outputs.TAG }} https://github.com/twicemind/magicmirror-wlan.git
+          cd magicmirror-wlan
+          bash test/test-environment.sh
+          ```
+          
+          ### 📋 What's New
+          
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ### 📚 Documentation
+          
+          - [README.md](https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version.outputs.TAG }}/README.md) - Project overview
+          - [INSTALLATION.md](https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version.outputs.TAG }}/INSTALLATION.md) - Detailed installation guide
+          - [QUICKSTART.md](https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version.outputs.TAG }}/QUICKSTART.md) - 5-minute setup
+          - [CHANGELOG.md](https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version.outputs.TAG }}/CHANGELOG.md) - Full changelog
+          
+          ### ✨ Features
+          
+          - ✅ Automatic HotSpot when no internet connection
+          - ✅ Web-based WiFi configuration (port 8765)
+          - ✅ QR code generation for easy mobile setup
+          - ✅ MagicMirror module with auto-show/hide
+          - ✅ Fully testable locally with mock mode
+          - ✅ Systemd services for automatic operation
+          
+          ### 🔧 Components
+          
+          - **Network Monitor**: Python service monitoring connectivity
+          - **HotSpot Manager**: hostapd + dnsmasq configuration
+          - **WebUI**: Flask-based configuration interface
+          - **MMM-WLANManager**: MagicMirror² module
+          
+          ### 📦 Checksums
+          
+          See `checksums.txt` for SHA256 checksums of release artifacts.
+          
+          ### 🐛 Known Issues
+          
+          See [Issues](https://github.com/twicemind/magicmirror-wlan/issues) for known problems and workarounds.
+          
+          ---
+          
+          **Full Changelog**: https://github.com/twicemind/magicmirror-wlan/blob/${{ steps.version.outputs.TAG }}/CHANGELOG.md
+          EOF
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: "v${{ steps.version.outputs.VERSION }}"
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            release/magicmirror-wlan-${{ steps.version.outputs.VERSION }}.tar.gz
+            release/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
