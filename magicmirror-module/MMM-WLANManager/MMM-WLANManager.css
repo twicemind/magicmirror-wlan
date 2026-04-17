@@ -1,0 +1,164 @@
+/**
+ * MMM-WLANManager Styles
+ */
+
+.MMM-WLANManager {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #fff;
+    text-align: center;
+}
+
+.MMM-WLANManager .wlan-header h1 {
+    font-size: 3em;
+    margin-bottom: 30px;
+    font-weight: 300;
+}
+
+.MMM-WLANManager .status-box {
+    padding: 30px 50px;
+    border-radius: 20px;
+    margin: 30px auto;
+    max-width: 800px;
+    backdrop-filter: blur(10px);
+}
+
+.MMM-WLANManager .status-box.hotspot {
+    background: rgba(245, 158, 11, 0.2);
+    border: 2px solid rgba(245, 158, 11, 0.5);
+}
+
+.MMM-WLANManager .status-box.offline {
+    background: rgba(239, 68, 68, 0.2);
+    border: 2px solid rgba(239, 68, 68, 0.5);
+}
+
+.MMM-WLANManager .status-box.online {
+    background: rgba(16, 185, 129, 0.2);
+    border: 2px solid rgba(16, 185, 129, 0.5);
+}
+
+.MMM-WLANManager .status-box h2 {
+    font-size: 2em;
+    margin-bottom: 15px;
+    font-weight: 400;
+}
+
+.MMM-WLANManager .status-box p {
+    font-size: 1.3em;
+    opacity: 0.9;
+}
+
+.MMM-WLANManager .instructions {
+    margin: 40px auto;
+    max-width: 700px;
+    text-align: left;
+}
+
+.MMM-WLANManager .instructions h3 {
+    font-size: 1.8em;
+    margin-bottom: 15px;
+    font-weight: 300;
+}
+
+.MMM-WLANManager .instructions ol {
+    font-size: 1.3em;
+    line-height: 1.8;
+    padding-left: 30px;
+}
+
+.MMM-WLANManager .qr-container {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    margin: 40px auto;
+    flex-wrap: wrap;
+}
+
+.MMM-WLANManager .qr-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.MMM-WLANManager .qr-label {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    font-weight: 300;
+}
+
+.MMM-WLANManager .qr-item img {
+    width: 300px;
+    height: 300px;
+    border-radius: 10px;
+    background: white;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.MMM-WLANManager .qr-details {
+    font-size: 1.2em;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.MMM-WLANManager .qr-details strong {
+    color: #fbbf24;
+    font-family: monospace;
+}
+
+.MMM-WLANManager .manual-instructions {
+    margin-top: 40px;
+    font-size: 1.1em;
+    max-width: 800px;
+    line-height: 1.6;
+}
+
+.MMM-WLANManager .loading,
+.MMM-WLANManager .error {
+    font-size: 1.5em;
+    padding: 50px;
+    opacity: 0.7;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .MMM-WLANManager .qr-item img {
+        width: 250px;
+        height: 250px;
+    }
+    
+    .MMM-WLANManager .qr-container {
+        gap: 40px;
+    }
+}
+
+@media (max-width: 800px) {
+    .MMM-WLANManager {
+        padding: 20px;
+    }
+    
+    .MMM-WLANManager .wlan-header h1 {
+        font-size: 2em;
+    }
+    
+    .MMM-WLANManager .qr-item img {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .MMM-WLANManager .qr-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+}

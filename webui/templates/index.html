@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagicMirror WLAN Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🪞 MagicMirror WLAN Manager</h1>
+            <div id="status-indicator" class="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Loading...</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Status Card -->
+            <section class="card">
+                <h2>📡 Network Status</h2>
+                <div id="network-status" class="status-grid">
+                    <div class="status-item">
+                        <span class="label">Mode:</span>
+                        <span id="status-mode" class="value">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Internet:</span>
+                        <span id="status-internet" class="value">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Connected SSID:</span>
+                        <span id="status-ssid" class="value">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">IP Address:</span>
+                        <span id="status-ip" class="value">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HotSpot Info Card (nur sichtbar im HotSpot Mode) -->
+            <section id="hotspot-info" class="card" style="display: none;">
+                <h2>🔥 HotSpot Active</h2>
+                <div class="hotspot-details">
+                    <p><strong>Connect your phone to:</strong></p>
+                    <div class="credential-box">
+                        <div>SSID: <code>MagicMirror-Setup</code></div>
+                        <div>Password: <code>magicmirror</code></div>
+                    </div>
+                    <p style="margin-top: 15px;">
+                        Then open this page on your phone to configure WiFi.
+                    </p>
+                </div>
+            </section>
+
+            <!-- WLAN Configuration Card -->
+            <section class="card">
+                <h2>🔧 Configure WiFi</h2>
+                
+                <button id="scan-btn" class="btn btn-primary" onclick="scanNetworks()">
+                    <span class="btn-text">Scan for Networks</span>
+                </button>
+
+                <div id="networks-list" class="networks-list" style="display: none;">
+                    <h3>Available Networks</h3>
+                    <div id="networks-content"></div>
+                </div>
+
+                <div id="config-form" class="config-form" style="display: none;">
+                    <h3>Connect to WiFi</h3>
+                    <form onsubmit="configureWiFi(event)">
+                        <div class="form-group">
+                            <label for="ssid">Network (SSID):</label>
+                            <input type="text" id="ssid" name="ssid" required readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="encryption">Encryption:</label>
+                            <select id="encryption" name="encryption">
+                                <option value="WPA2-PSK">WPA2 (recommended)</option>
+                                <option value="WPA-PSK">WPA</option>
+                                <option value="Open">Open (no password)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="password-group">
+                            <label for="password">Password:</label>
+                            <input type="password" id="password" name="password" minlength="8">
+                            <small>Minimum 8 characters</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="cancelConfig()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Connect</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="config-result" class="config-result" style="display: none;"></div>
+            </section>
+
+            <!-- QR Codes Card -->
+            <section class="card">
+                <h2>📱 QR Codes</h2>
+                <p>Scan these QR codes on your phone for quick access.</p>
+                <div id="qr-codes" class="qr-grid">
+                    <div class="qr-item">
+                        <div class="qr-label">Connect to HotSpot</div>
+                        <img id="qr-hotspot" src="" alt="HotSpot QR" style="display: none;">
+                        <div class="loading">Loading...</div>
+                    </div>
+                    <div class="qr-item">
+                        <div class="qr-label">Open WebUI</div>
+                        <img id="qr-webui" src="" alt="WebUI QR" style="display: none;">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Last updated: <span id="last-update">-</span></p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

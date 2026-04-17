@@ -1,0 +1,16 @@
+[Unit]
+Description=MagicMirror WLAN Network Monitor
+After=network.target
+Wants=wlan-webui.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/magicmirror-wlan/scripts/network-monitor.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

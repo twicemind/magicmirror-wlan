@@ -1,0 +1,17 @@
+[Unit]
+Description=MagicMirror WLAN WebUI
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/magicmirror-wlan/webui
+Environment="PATH=/opt/magicmirror-wlan/webui/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/opt/magicmirror-wlan/webui/venv/bin/python app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

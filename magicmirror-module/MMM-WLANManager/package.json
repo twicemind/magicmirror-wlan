@@ -1,0 +1,22 @@
+{
+  "name": "mmm-wlanmanager",
+  "version": "1.0.0",
+  "description": "MagicMirror module for WiFi management with QR codes",
+  "main": "MMM-WLANManager.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "MagicMirror",
+    "module",
+    "WiFi",
+    "WLAN",
+    "QR-Code",
+    "HotSpot"
+  ],
+  "author": "twicemind",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

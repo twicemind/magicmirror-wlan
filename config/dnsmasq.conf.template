@@ -1,0 +1,22 @@
+# dnsmasq configuration template
+# Used by start-hotspot.sh for DHCP and DNS
+
+interface=wlan0
+
+# DHCP range
+dhcp-range=192.168.4.10,192.168.4.100,24h
+
+# Default gateway
+dhcp-option=3,192.168.4.1
+
+# DNS servers
+dhcp-option=6,192.168.4.1
+server=8.8.8.8
+server=1.1.1.1
+
+# Logging
+log-facility=/var/log/dnsmasq-hotspot.log
+log-queries
+
+# Bind to interface
+bind-interfaces

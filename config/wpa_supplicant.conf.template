@@ -1,0 +1,13 @@
+# wpa_supplicant configuration template
+# Base configuration - networks are added by configure-wlan.sh
+
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=DE
+
+# Example network configuration (added by configure-wlan.sh):
+# network={
+#     ssid="YourWiFiName"
+#     psk="YourPassword"
+#     priority=1
+# }
