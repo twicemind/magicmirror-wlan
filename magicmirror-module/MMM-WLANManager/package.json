@@ -1,6 +1,6 @@
 {
   "name": "mmm-wlanmanager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MagicMirror module for WiFi management with QR codes",
   "main": "MMM-WLANManager.js",
   "scripts": {
