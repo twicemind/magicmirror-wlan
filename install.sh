@@ -34,7 +34,7 @@ fi
 # Detect user if not pi
 if ! id "pi" &>/dev/null; then
     echo -e "${YELLOW}User 'pi' not found. Please enter the username to run services:${NC}"
-    read -p "Username: " USER
+    read -r -p "Username: " USER
     
     if ! id "$USER" &>/dev/null; then
         echo -e "${RED}User $USER does not exist!${NC}"
