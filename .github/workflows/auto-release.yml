@@ -176,8 +176,16 @@ jobs:
         if: steps.check_bump.outputs.SHOULD_RELEASE == 'true'
         id: changelog
         run: |
+          # Try to extract from CHANGELOG.md if entry exists
           VERSION="${{ steps.version_bump.outputs.NEW_VERSION }}"
-          CHANGELOG=$(sed -n "/## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+          
+          if grep -q "## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
+            # Extract changelog entry using awk (more reliable than sed)
+            CHANGELOG=$(awk "/## \[$VERSION\]/,/^## \[/{if (/^## \[$VERSION\]/) next; if (/^## \[/) exit; print}" CHANGELOG.md)
+          else
+            # Fallback: use commit messages since last tag
+            CHANGELOG=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
           
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
@@ -191,15 +199,8 @@ jobs:
           name: "${{ steps.version_bump.outputs.NEW_TAG }}"
           body: |
             ## MagicMirror WLAN Manager ${{ steps.version_bump.outputs.NEW_VERSION }}
-          # Try to extract from CHANGELOG.md if entry exists
-          VERSION="${{ steps.version_bump.outputs.NEW_VERSION }}"
-          
-          if grep -q "## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
-            CHANGELOG=$(sed -n "/## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
-          else
-            # Fallback: use commit messages since last tag
-            CHANGELOG=$(git log ${{ steps.get_tag.outputs.LATEST_TAG }}..HEAD --pretty=format:"- %s (%h)" --no-merges)
-          fi
+            
+            ### Installation
             ```bash
             curl -sSL https://raw.githubusercontent.com/twicemind/magicmirror-wlan/${{ steps.version_bump.outputs.NEW_TAG }}/install.sh | sudo bash
             ```
