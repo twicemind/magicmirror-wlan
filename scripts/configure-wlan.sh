@@ -71,6 +71,7 @@ if [[ "${MOCK_MODE}" != "true" ]]; then
     
     # Wait for connection
     echo "Waiting for connection (up to 15 seconds)..."
+    # shellcheck disable=SC2034
     for i in {1..15}; do
         if iwgetid -r &>/dev/null; then
             CONNECTED_SSID=$(iwgetid -r)

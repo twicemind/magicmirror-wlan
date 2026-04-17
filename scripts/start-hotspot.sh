@@ -10,7 +10,6 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$(dirname "$SCRIPT_DIR")/config"
 INTERFACE="wlan0"
 HOTSPOT_IP="192.168.4.1"
 HOTSPOT_SSID="MagicMirror-Setup"

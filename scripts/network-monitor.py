@@ -36,12 +36,13 @@ MOCK_MODE = os.environ.get("MOCK_MODE", "false").lower() == "true"
 # Setup Logging
 def setup_logging():
     """Setup logging to file and console"""
+    global LOG_FILE
+    
     log_dir = Path(LOG_FILE).parent
     if not MOCK_MODE:
         log_dir.mkdir(parents=True, exist_ok=True)
     else:
         # In Mock Mode: Log to test directory
-        global LOG_FILE
         LOG_FILE = SCRIPT_DIR.parent / "test" / "network-monitor.log"
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     
